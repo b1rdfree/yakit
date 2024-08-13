@@ -1,0 +1,345 @@
+name: Yakit-CE-CI
+# 社区版
+
+on:
+    push:
+        branches:
+            # - "ci/ce-*"
+        tags:
+            - "v*"
+    pull_request:
+        branches:
+            - "dev"
+            - "dev-low"
+
+jobs:
+    build_yakit:
+        runs-on: macos-13
+        env:
+            CI: ""
+            NODE_OPTIONS: --max_old_space_size=4096
+            BRANCH_NAME: ${{ startsWith(github.ref, 'refs/tags/v') && 'tag/v' || 'ci/ce' }}-${{ contains(github.ref, 'mac') && 'mac' || contains(github.ref, 'linux') && 'linux' || contains(github.ref, 'win') && 'win' || 'mwl' }}-${{ contains(github.ref, 'low') && 'low' || 'normal' }}
+        steps:
+            - name: Show ENV Branch Name
+              run: echo ${{ env.BRANCH_NAME }}
+
+            - uses: actions/checkout@v4
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: 18.18.2
+                  cache: "yarn"
+                  cache-dependency-path: |
+                      yarn.lock
+                      app/renderer/src/main/yarn.lock
+
+            - run: echo ${{ github.ref }}
+            - run: cp buildutil/zip /usr/local/bin/zip
+            - run: chmod +x /usr/local/bin/zip
+            - run: zip -h
+
+            - name: "Download Yak Engine via wget(MacOS)"
+              if: ${{ startsWith(env.BRANCH_NAME, 'tag/v') || contains(env.BRANCH_NAME, 'mwl') || contains(env.BRANCH_NAME, 'mac') }}
+              id: download-darwin-engine
+              run: wget -O bins/yak_darwin_amd64 https://yaklang.oss-accelerate.aliyuncs.com/yak/latest/yak_darwin_amd64 && zip ./bins/yak_darwin_amd64.zip ./bins/yak_darwin_amd64 && rm ./bins/yak_darwin_amd64
+            - name: "Download Yak Engine via wget(MacOS-arm64)"
+              if: ${{ startsWith(env.BRANCH_NAME, 'tag/v') || contains(env.BRANCH_NAME, 'mwl') || contains(env.BRANCH_NAME, 'mac') }}
+              id: download-darwin-engine-arm64
+              run: wget -O bins/yak_darwin_arm64 https://yaklang.oss-accelerate.aliyuncs.com/yak/latest/yak_darwin_arm64 && zip ./bins/yak_darwin_arm64.zip ./bins/yak_darwin_arm64 && rm ./bins/yak_darwin_arm64
+
+            - name: "Download Yak Engine via wget(Linux)"
+              if: ${{ startsWith(env.BRANCH_NAME, 'tag/v') || contains(env.BRANCH_NAME, 'mwl') || contains(env.BRANCH_NAME, 'linux') }}
+              id: download-linux-engine
+              run: wget -O bins/yak_linux_amd64 https://yaklang.oss-accelerate.aliyuncs.com/yak/latest/yak_linux_amd64 && zip ./bins/yak_linux_amd64.zip ./bins/yak_linux_amd64 && rm ./bins/yak_linux_amd64
+            - name: "Download Yak Engine via wget(Linux-arm64)"
+              if: ${{ startsWith(env.BRANCH_NAME, 'tag/v') || contains(env.BRANCH_NAME, 'mwl') || contains(env.BRANCH_NAME, 'linux') }}
+              id: download-linux-engine-arm64
+              run: wget -O bins/yak_linux_arm64 https://yaklang.oss-accelerate.aliyuncs.com/yak/latest/yak_linux_arm64 && zip ./bins/yak_linux_arm64.zip ./bins/yak_linux_arm64 && rm ./bins/yak_linux_arm64
+
+            - name: "Download Yak Engine via wget(Windows)"
+              if: ${{ startsWith(env.BRANCH_NAME, 'tag/v') || contains(env.BRANCH_NAME, 'mwl') || contains(env.BRANCH_NAME, 'win') }}
+              id: download-windows-engine
+              run: wget -O bins/yak_windows_amd64.exe https://yaklang.oss-accelerate.aliyuncs.com/yak/latest/yak_windows_amd64.exe && zip ./bins/yak_windows_amd64.zip ./bins/yak_windows_amd64.exe && rm ./bins/yak_windows_amd64.exe
+
+            - name: "Fetch Latest EngineVersion"
+              id: fetch-version-engine
+              run: wget -O bins/engine-version.txt https://yaklang.oss-accelerate.aliyuncs.com/yak/latest/version.txt
+            - run: ls ./bins && cat bins/engine-version.txt
+
+            - name: Extract Package.json Version
+              id: extract_version
+              uses: Saionaro/extract-package-version@v1.1.1
+            - name: Echo Yakit Package Version
+              run: echo ${{ steps.extract_version.outputs.version }}
+
+            - run: yarn install && yarn install-render
+              working-directory: ./
+              name: "Install Dependencies"
+
+            - run: yarn build-render
+              working-directory: ./
+              name: "Build Community"
+
+            - name: Build Yakit (MultiPlatform)
+              if: ${{ startsWith(env.BRANCH_NAME, 'tag/v') || (contains(env.BRANCH_NAME, 'mwl') && contains(env.BRANCH_NAME, 'normal')) }}
+              env:
+                  GH_TOKEN: ${{ secrets.GH_TOKEN }}
+              working-directory: ./
+              run: yarn add -D dmg-license && yarn electron-publish
+
+            - name: Build Yakit (MAC)
+              if: ${{ !startsWith(env.BRANCH_NAME, 'tag/v') && contains(env.BRANCH_NAME, 'mac') && contains(env.BRANCH_NAME, 'normal') }}
+              env:
+                  GH_TOKEN: ${{ secrets.GH_TOKEN }}
+              working-directory: ./
+              run: yarn pack-mac
+
+            - name: Build Yakit (LINUX)
+              if: ${{ !startsWith(env.BRANCH_NAME, 'tag/v') && contains(env.BRANCH_NAME, 'linux') && contains(env.BRANCH_NAME, 'normal') }}
+              env:
+                  GH_TOKEN: ${{ secrets.GH_TOKEN }}
+              working-directory: ./
+              run: yarn pack-linux
+
+            - name: Build Yakit (WIN)
+              if: ${{ !startsWith(env.BRANCH_NAME, 'tag/v') && contains(env.BRANCH_NAME, 'win') && contains(env.BRANCH_NAME, 'normal') }}
+              env:
+                  GH_TOKEN: ${{ secrets.GH_TOKEN }}
+              working-directory: ./
+              run: yarn pack-win
+
+            - run: yarn add electron@22.3.27
+              if: ${{ startsWith(env.BRANCH_NAME, 'tag/v') ||  contains(env.BRANCH_NAME, 'low') }}
+              working-directory: ./
+              name: "Install Low Electron"
+
+            - name: Build Yakit Low (MultiPlatform)
+              if: ${{ startsWith(env.BRANCH_NAME, 'tag/v') || (contains(env.BRANCH_NAME, 'mwl') && contains(env.BRANCH_NAME, 'low')) }}
+              env:
+                  GH_TOKEN: ${{ secrets.GH_TOKEN }}
+              working-directory: ./
+              run: yarn add -D dmg-license && yarn electron-publish-low
+
+            - name: Build Yakit Low (MAC)
+              if: ${{ !startsWith(env.BRANCH_NAME, 'tag/v') && contains(env.BRANCH_NAME, 'mac') && contains(env.BRANCH_NAME, 'low') }}
+              env:
+                  GH_TOKEN: ${{ secrets.GH_TOKEN }}
+              working-directory: ./
+              run: yarn pack-mac-low
+
+            - name: Build Yakit Low (LINUX)
+              if: ${{ !startsWith(env.BRANCH_NAME, 'tag/v') && contains(env.BRANCH_NAME, 'linux') && contains(env.BRANCH_NAME, 'low') }}
+              env:
+                  GH_TOKEN: ${{ secrets.GH_TOKEN }}
+              working-directory: ./
+              run: yarn pack-linux-low
+
+            - name: Build Yakit Low (WIN)
+              if: ${{ !startsWith(env.BRANCH_NAME, 'tag/v') && contains(env.BRANCH_NAME, 'win') && contains(env.BRANCH_NAME, 'low') }}
+              env:
+                  GH_TOKEN: ${{ secrets.GH_TOKEN }}
+              working-directory: ./
+              run: yarn pack-win-low
+
+            - name: View Published Content
+              run:
+                  ls ./release
+                  # Yakit-1.3.4-sp6-darwin-arm64.dmg
+                  # Yakit-1.3.4-sp6-darwin-x64.dmg
+                  # Yakit-1.3.4-sp6-linux-amd64.AppImage
+                  # Yakit-1.3.4-sp6-linux-arm64.AppImage
+                  # Yakit-1.3.4-sp6-windows-amd64.exe
+                  # Yakit-1.3.4-sp6-darwin-arm64-low.dmg
+                  # Yakit-1.3.4-sp6-darwin-x64-low.dmg
+                  # Yakit-1.3.4-sp6-linux-amd64-low.AppImage
+                  # Yakit-1.3.4-sp6-linux-arm64-low.AppImage
+                  # Yakit-1.3.4-sp6-windows-amd64-low.exe
+
+              # - name: Upload Yakit(Community) Artifacts Windows
+              #   uses: actions/upload-artifact@v2
+              #   if: ${{ startsWith(github.ref, 'refs/tags/v') || startsWith(github.ref, 'refs/heads/ci/community-') }}
+              #   with:
+              #       # Yakit-1.0.3-beta24-win32-x64.exe
+              #       name: Yakit-${{ steps.extract_version.outputs.version }}-windows-amd64.exe
+              #       path: ./release/Yakit-${{ steps.extract_version.outputs.version }}-windows-amd64.exe
+              # - name: Upload Yakit(Community) Artifacts Mac(m1)
+              #   uses: actions/upload-artifact@v2
+              #   if: ${{ startsWith(github.ref, 'refs/tags/v') || startsWith(github.ref, 'refs/heads/ci/community-') }}
+              #   with:
+              #       # Yakit-1.0.3-beta24-win32-x64.exe
+              #       name: Yakit-${{ steps.extract_version.outputs.version }}-darwin-arm64.dmg
+              #       path: ./release/Yakit-${{ steps.extract_version.outputs.version }}-darwin-arm64.dmg
+              # - name: Upload Yakit(Community) Artifacts Mac(intel)
+              #   uses: actions/upload-artifact@v2
+              #   if: ${{ startsWith(github.ref, 'refs/tags/v') || startsWith(github.ref, 'refs/heads/ci/community-') }}
+              #   with:
+              #       # Yakit-1.0.3-beta24-win32-x64.exe
+              #       name: Yakit-${{ steps.extract_version.outputs.version }}-darwin-x64.dmg
+              #       path: ./release/Yakit-${{ steps.extract_version.outputs.version }}-darwin-x64.dmg
+              # - name: Upload Yakit(Community) Artifacts Linux(amd64)
+              #   uses: actions/upload-artifact@v2
+              #   if: ${{ startsWith(github.ref, 'refs/tags/v') || startsWith(github.ref, 'refs/heads/ci/community-') }}
+              #   with:
+              #       # Yakit-1.0.3-beta24-win32-x64.exe
+              #       name: Yakit-${{ steps.extract_version.outputs.version }}-linux-amd64.AppImage
+              #       path: ./release/Yakit-${{ steps.extract_version.outputs.version }}-linux-amd64.AppImage
+              # - name: Upload Yakit(Community) Artifacts Linux(arm64)
+              # uses: actions/upload-artifact@v2
+              # if: ${{ startsWith(github.ref, 'refs/tags/v') || startsWith(github.ref, 'refs/heads/ci/community-') }}
+              # with:
+              #     name: Yakit-${{ steps.extract_version.outputs.version }}-linux-arm64.AppImage
+              #     path: ./release/Yakit-${{ steps.extract_version.outputs.version }}-linux-arm64.AppImage
+
+    # publish_yakit_ce_to_oss:
+    #     if: ${{ startsWith(github.ref, 'refs/tags/v') }}
+    #     needs:
+    #         - build_yakit
+    #     runs-on: ubuntu-latest
+    #     steps:
+    #         - name: Set Yak Version by Tag
+    #           uses: mad9000/actions-find-and-replace-string@1
+    #           id: fetchtag_release
+    #           with:
+    #               source: ${{ github.ref }}
+    #               find: "refs/tags/v"
+    #               replace: ""
+    #         - name: Download Yakit (Darwin Amd64)
+    #           uses: actions/download-artifact@v2
+    #           with:
+    #               name: Yakit-${{ steps.fetchtag_release.outputs.value }}-darwin-x64.dmg
+    #         - name: Download Yakit (Windows amd64)
+    #           uses: actions/download-artifact@v2
+    #           with:
+    #               name: Yakit-${{ steps.fetchtag_release.outputs.value }}-windows-amd64.exe
+    #         - name: Download Yakit (Darwin arm64)
+    #           uses: actions/download-artifact@v2
+    #           with:
+    #               name: Yakit-${{ steps.fetchtag_release.outputs.value }}-darwin-arm64.dmg
+    #         - name: Download Yakit (Linux amd64)
+    #           uses: actions/download-artifact@v2
+    #           with:
+    #               name: Yakit-${{ steps.fetchtag_release.outputs.value }}-linux-amd64.AppImage
+    #         - name: Download Yakit (Linux arm64)
+    #           uses: actions/download-artifact@v2
+    #           with:
+    #               name: Yakit-${{ steps.fetchtag_release.outputs.value }}-linux-arm64.AppImage
+    #         - run: ls
+    #           name: Ls Published Artifacts...
+
+    #         - name: Create Release
+    #           id: create_release
+    #           uses: actions/create-release@v1
+    #           continue-on-error: true
+    #           env:
+    #               GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+    #           with:
+    #               tag_name: ${{ github.ref }}
+    #               release_name: Release ${{ github.ref }}
+    #               draft: false
+    #               prerelease: false
+
+    #         # 上传 release asset
+    #         - name: Upload Release Asset (Windows)
+    #           uses: actions/upload-release-asset@v1
+    #           continue-on-error: true
+    #           env:
+    #               GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+    #           with:
+    #               upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
+    #               asset_path: ./Yakit-${{ steps.fetchtag_release.outputs.value }}-windows-amd64.exe
+    #               asset_name: Yakit-${{ steps.fetchtag_release.outputs.value }}-windows-amd64.exe
+    #               asset_content_type: application/octet-stream
+
+    #         - name: Upload Release Asset (MacOS)
+    #           uses: actions/upload-release-asset@v1
+    #           continue-on-error: true
+    #           env:
+    #               GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+    #           with:
+    #               upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
+    #               asset_path: ./Yakit-${{ steps.fetchtag_release.outputs.value }}-darwin-x64.dmg
+    #               asset_name: Yakit-${{ steps.fetchtag_release.outputs.value }}-darwin-x64.dmg
+    #               asset_content_type: application/octet-stream
+
+    #         - name: Upload Release Asset (MacOS-M1)
+    #           uses: actions/upload-release-asset@v1
+    #           continue-on-error: true
+    #           env:
+    #               GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+    #           with:
+    #               upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
+    #               asset_path: ./Yakit-${{ steps.fetchtag_release.outputs.value }}-darwin-arm64.dmg
+    #               asset_name: Yakit-${{ steps.fetchtag_release.outputs.value }}-darwin-arm64.dmg
+    #               asset_content_type: application/octet-stream
+
+    #         - name: Upload Release Asset (Linux)
+    #           uses: actions/upload-release-asset@v1
+    #           continue-on-error: true
+    #           env:
+    #               GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+    #           with:
+    #               upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
+    #               asset_path: ./Yakit-${{ steps.fetchtag_release.outputs.value }}-linux-amd64.AppImage
+    #               asset_name: Yakit-${{ steps.fetchtag_release.outputs.value }}-linux-amd64.AppImage
+    #               asset_content_type: application/octet-stream
+    #         - name: Upload Release Asset (Linux-arm64)
+    #           uses: actions/upload-release-asset@v1
+    #           continue-on-error: true
+    #           env:
+    #               GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+    #           with:
+    #               upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
+    #               asset_path: ./Yakit-${{ steps.fetchtag_release.outputs.value }}-linux-arm64.AppImage
+    #               asset_name: Yakit-${{ steps.fetchtag_release.outputs.value }}-linux-arm64.AppImage
+    #               asset_content_type: application/octet-stream
+    #         - name: Run
+    #           run: ls
+    #         #      - name: Upload yak to oss Latest
+    #         #        uses: tvrcgo/upload-to-oss@master
+    #         #        with:
+    #         #          key-id: ${{ secrets.OSS_KEY_ID }}
+    #         #          key-secret: ${{ secrets.OSS_KEY_SECRET }}
+    #         #          region: oss-accelerate
+    #         #          bucket: yaklang
+    #         #          assets: |
+    #         #            yak_windows_amd64.exe:/yak/latest/yak_windows_amd64.exe
+    #         #            yak_windows_amd64.exe:/yak/${{ steps.fetchtag_release.outputs.value }}/yak_windows_amd64.exe
+    #         #            yak_linux_amd64:/yak/latest/yak_linux_amd64
+    #         #            yak_linux_amd64:/yak/${{ steps.fetchtag_release.outputs.value }}/yak_linux_amd64
+    #         #            yak_darwin_amd64:/yak/latest/yak_darwin_amd64
+    #         #            yak_darwin_amd64:/yak/${{ steps.fetchtag_release.outputs.value }}/yak_darwin_amd64
+    #         #      - name: Upload Yakit to oss(MacOS m1)
+    #         #        uses: tvrcgo/upload-to-oss@master
+    #         #        with:
+    #         #          key-id: ${{ secrets.OSS_KEY_ID }}
+    #         #          key-secret: ${{ secrets.OSS_KEY_SECRET }}
+    #         #          region: oss-accelerate
+    #         #          bucket: yaklang
+    #         #          assets: |
+    #         #            Yakit-${{ steps.fetchtag_release.outputs.value }}-darwin-arm64.dmg:/yak/${{ steps.fetchtag_release.outputs.value }}/Yakit-${{ steps.fetchtag_release.outputs.value }}-darwin-arm64.dmg
+    #         #            Yakit-${{ steps.fetchtag_release.outputs.value }}-darwin-arm64.dmg:/yak/latest/Yakit-${{ steps.fetchtag_release.outputs.value }}-darwin-arm64.dmg
+
+    #         - name: Upload Yakit to oss
+    #           uses: tvrcgo/upload-to-oss@master
+    #           with:
+    #               key-id: ${{ secrets.OSS_KEY_ID }}
+    #               key-secret: ${{ secrets.OSS_KEY_SECRET }}
+    #               region: oss-accelerate
+    #               bucket: yaklang
+    #               assets: |
+    #                   Yakit-${{ steps.fetchtag_release.outputs.value }}-windows-amd64.exe:/yak/${{ steps.fetchtag_release.outputs.value }}/Yakit-${{ steps.fetchtag_release.outputs.value }}-windows-amd64.exe
+    #                   Yakit-${{ steps.fetchtag_release.outputs.value }}-darwin-x64.dmg:/yak/${{ steps.fetchtag_release.outputs.value }}/Yakit-${{ steps.fetchtag_release.outputs.value }}-darwin-x64.dmg
+    #                   Yakit-${{ steps.fetchtag_release.outputs.value }}-darwin-arm64.dmg:/yak/${{ steps.fetchtag_release.outputs.value }}/Yakit-${{ steps.fetchtag_release.outputs.value }}-darwin-arm64.dmg
+    #                   Yakit-${{ steps.fetchtag_release.outputs.value }}-linux-amd64.AppImage:/yak/${{ steps.fetchtag_release.outputs.value }}/Yakit-${{ steps.fetchtag_release.outputs.value }}-linux-amd64.AppImage
+    #                   Yakit-${{ steps.fetchtag_release.outputs.value }}-linux-arm64.AppImage:/yak/${{ steps.fetchtag_release.outputs.value }}/Yakit-${{ steps.fetchtag_release.outputs.value }}-linux-arm64.AppImage
+
+    #         - name: Update OSS latest file
+    #           run: echo ${{ steps.fetchtag_release.outputs.value }} > ./yakit-version.txt
+    #         - name: Upload Yakit Version to oss
+    #           uses: tvrcgo/upload-to-oss@master
+    #           with:
+    #               key-id: ${{ secrets.OSS_KEY_ID }}
+    #               key-secret: ${{ secrets.OSS_KEY_SECRET }}
+    #               region: oss-accelerate
+    #               bucket: yaklang
+    #               assets: |
+    #                   ./yakit-version.txt:/yak/latest/yakit-version.txt
