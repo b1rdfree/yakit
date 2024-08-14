@@ -1,11 +1,11 @@
 name: Yakit-CI
 
 on:
-  # push:
+  push:
     # branches:
     #   - "ci/*"
-    # tags:
-    #   - "v*"
+    tags:
+      - "v*"
 
 jobs:
   build_yakit:
