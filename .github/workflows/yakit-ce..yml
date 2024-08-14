@@ -240,23 +240,24 @@ jobs:
             - name: Download Yakit (Darwin Amd64)
               uses: actions/download-artifact@v4
               with:
-                  name: Yakit-${{ steps.fetchtag_release.outputs.value }}-darwin-x64.dmg
-            - name: Download Yakit (Windows amd64)
-              uses: actions/download-artifact@v4
-              with:
-                  name: Yakit-${{ steps.fetchtag_release.outputs.value }}-windows-amd64.exe
-            - name: Download Yakit (Darwin arm64)
-              uses: actions/download-artifact@v4
-              with:
-                  name: Yakit-${{ steps.fetchtag_release.outputs.value }}-darwin-arm64.dmg
-            - name: Download Yakit (Linux amd64)
-              uses: actions/download-artifact@v4
-              with:
-                  name: Yakit-${{ steps.fetchtag_release.outputs.value }}-linux-amd64.AppImage
-            - name: Download Yakit (Linux arm64)
-              uses: actions/download-artifact@v4
-              with:
-                  name: Yakit-${{ steps.fetchtag_release.outputs.value }}-linux-arm64.AppImage
+                  merge-multiple: true
+            #   name: Yakit-${{ steps.fetchtag_release.outputs.value }}-darwin-x64.dmg
+            # - name: Download Yakit (Windows amd64)
+            #   uses: actions/download-artifact@v4
+            #   with:
+            #       name: Yakit-${{ steps.fetchtag_release.outputs.value }}-windows-amd64.exe
+            # - name: Download Yakit (Darwin arm64)
+            #   uses: actions/download-artifact@v4
+            #   with:
+            #       name: Yakit-${{ steps.fetchtag_release.outputs.value }}-darwin-arm64.dmg
+            # - name: Download Yakit (Linux amd64)
+            #   uses: actions/download-artifact@v4
+            #   with:
+            #       name: Yakit-${{ steps.fetchtag_release.outputs.value }}-linux-amd64.AppImage
+            # - name: Download Yakit (Linux arm64)
+            #   uses: actions/download-artifact@v4
+            #   with:
+            #       name: Yakit-${{ steps.fetchtag_release.outputs.value }}-linux-arm64.AppImage
 
             - run: ls
               name: Ls Published Artifacts...
