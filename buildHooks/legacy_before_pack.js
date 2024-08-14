@@ -18,7 +18,7 @@ module.exports = async function (context) {
         ];
         switch (arch) {
             case "arm64":
-                linuxConfig.artifactName = "${productName}-${version}-linux-arm64-low.${ext}";
+                linuxConfig.artifactName = "${productName}-${version}-linux-legacy-arm64.${ext}";
                 linuxConfig.extraFiles = [
                     ...linuxExtraFiles,
                     {
@@ -28,7 +28,7 @@ module.exports = async function (context) {
                 ];
                 break;
             case "x64":
-                linuxConfig.artifactName = "${productName}-${version}-linux-amd64-low.${ext}";
+                linuxConfig.artifactName = "${productName}-${version}-linux-legacy-amd64.${ext}";
                 linuxConfig.extraFiles = [
                     ...linuxExtraFiles,
                     {

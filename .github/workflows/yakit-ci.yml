@@ -2,8 +2,8 @@ name: Yakit-CI
 
 on:
   push:
-    branches:
-      - "ci/*"
+    # branches:
+    #   - "ci/*"
     tags:
       - "vaa*"
 
