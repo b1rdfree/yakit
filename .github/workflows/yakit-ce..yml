@@ -42,7 +42,7 @@ jobs:
             # - run: zip -h
             - run: echo ${{ !env.IS_TAG_RELEASE || env.PACKAGING_PLATFORM == 'mwl' || env.PACKAGING_PLATFORM == 'mac' }}
             - name: "Download Yak Engine via wget(MacOS)"
-              if: ${{ !env.IS_TAG_RELEASE || env.PACKAGING_PLATFORM == 'mwl' || env.PACKAGING_PLATFORM == 'mac' }}
+              if: ${{ false }}
               id: download-darwin-engine
               run: wget -O bins/yak_darwin_amd64 https://yaklang.oss-accelerate.aliyuncs.com/yak/latest/yak_darwin_amd64 && zip ./bins/yak_darwin_amd64.zip ./bins/yak_darwin_amd64 && rm ./bins/yak_darwin_amd64
             # - name: "Download Yak Engine via wget(MacOS-arm64)"
