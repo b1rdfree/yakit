@@ -53,7 +53,7 @@ publish:
       url: https://yaklang.oss-cn-beijing.aliyuncs.com/yak/latest/
 
 mac:
-    artifactName: ${productName}-${version}-darwin-${arch}-low.${ext}
+    artifactName: ${productName}-${version}-darwin-legacy-${arch}.${ext}
     gatekeeperAssess: false
     # extraFiles:
     #   - from: "bins/flag.darwin.txt"
@@ -86,7 +86,7 @@ linux:
     icon: "app/assets/yakitlogo.icns"
 
 win:
-    artifactName: ${productName}-${version}-windows-amd64-low.${ext}
+    artifactName: ${productName}-${version}-windows-legacy-amd64.${ext}
     extraFiles:
         - from: "bins/flag.windows.txt"
           to: "bins/flag.windows.txt"
@@ -113,7 +113,7 @@ nsis:
     createDesktopShortcut: false
     createStartMenuShortcut: true
 
-beforePack: "buildHooks/low_before_pack.js"
+beforePack: "buildHooks/legacy_before_pack.js"
 #publish:
 #  - provider: generic
 #    url: https://update.electron-builder.com
