@@ -1,10 +1,30 @@
-// 兼容低版本系统的打包脚本前置 hook
 module.exports = async function (context) {
     const archMap = {
         1: "x64",
         3: "arm64",
     };
     const arch = archMap[context.arch];
+
+    /** win32 */
+    const win32Config = context.electronPlatformName === "win32" ? context.packager.config.win : null;
+    if (win32Config) {
+        const baseInfo = context.packager.appInfo;
+        win32Config.extraFiles = [
+            {
+                from: "bins/flag.windows.txt",
+                to: "bins/flag.windows.txt",
+            },
+            {
+                from: "bins/yak_windows_amd64.zip",
+                to: "bins/yak.zip",
+            },
+        ];
+        const productVersion =
+            baseInfo.version.indexOf("-ee") > -1 ? baseInfo.version.replace("-ee", "") : baseInfo.version;
+        win32Config.artifactName = `${"${productName}"}-${productVersion}-windows-legacy-amd64.${"${ext}"}`;
+
+        context.packager.config.win = win32Config;
+    }
 
     /**linux */
     /** 1:x64 3:arm64 */
@@ -16,9 +36,12 @@ module.exports = async function (context) {
                 to: "bins/flag.linux.txt",
             },
         ];
+        const baseInfo = context.packager.appInfo;
+        const productVersion =
+            baseInfo.version.indexOf("-ee") > -1 ? baseInfo.version.replace("-ee", "") : baseInfo.version;
         switch (arch) {
             case "arm64":
-                linuxConfig.artifactName = "${productName}-${version}-linux-legacy-arm64.${ext}";
+                linuxConfig.artifactName = `${"${productName}"}-${productVersion}-linux-legacy-arm64.${"${ext}"}`;
                 linuxConfig.extraFiles = [
                     ...linuxExtraFiles,
                     {
@@ -28,7 +51,7 @@ module.exports = async function (context) {
                 ];
                 break;
             case "x64":
-                linuxConfig.artifactName = "${productName}-${version}-linux-legacy-amd64.${ext}";
+                linuxConfig.artifactName = `${"${productName}"}-${productVersion}-linux-legacy-amd64.${"${ext}"}`;
                 linuxConfig.extraFiles = [
                     ...linuxExtraFiles,
                     {
@@ -43,6 +66,7 @@ module.exports = async function (context) {
         }
         context.packager.config.linux = linuxConfig;
     }
+
     /**mac */
     /** 1:x64 3:arm64 */
     const macConfig = context.electronPlatformName === "darwin" ? context.packager.config.mac : null;
@@ -53,6 +77,10 @@ module.exports = async function (context) {
                 to: "bins/flag.darwin.txt",
             },
         ];
+        const baseInfo = context.packager.appInfo;
+        const productVersion =
+            baseInfo.version.indexOf("-ee") > -1 ? baseInfo.version.replace("-ee", "") : baseInfo.version;
+        macConfig.artifactName = `${"${productName}"}-${productVersion}-darwin-legacy-${"${arch}"}.${"${ext}"}`;
         switch (arch) {
             case "arm64":
                 macConfig.extraFiles = [

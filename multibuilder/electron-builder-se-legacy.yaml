@@ -1,6 +1,8 @@
-appId: "io.yaklang.yakit"
-productName: "Yakit"
-copyright: Copyright © 2024 yaklang.io
+appId: "io.yaklang.enpritraceagent"
+extraMetadata:
+    name: enpritraceagent
+productName: "EnpriTraceAgent"
+copyright: Copyright © 2021 v1ll4n
 
 extraFiles:
     - from: "bins/scripts/auto-install-cert.zip"
@@ -58,15 +60,14 @@ mac:
           arch:
               - x64
               - arm64
-    icon: "app/assets/yakitlogo.icns"
+    icon: "app/assets/yakitselogo.icns"
 
 linux:
     target:
         - target: AppImage
           arch:
               - x64
-              - arm64
-    icon: "app/assets/yakitlogo.icns"
+    icon: "app/assets/yakitselogo.icns"
 
 win:
     # requestedExecutionLevel: requireAdministrator
@@ -74,15 +75,15 @@ win:
         - target: nsis
           arch:
               - x64
-    icon: "app/assets/yakitlogo.ico"
+    icon: "app/assets/yakitselogo.ico"
 
 nsis:
     oneClick: false
     perMachine: false
     deleteAppDataOnUninstall: true
     allowToChangeInstallationDirectory: true
-    installerIcon: app/assets/yakitlogo.ico
-    uninstallerIcon: app/assets/yakitlogo.ico
+    installerIcon: app/assets/yakitselogo.ico
+    uninstallerIcon: app/assets/yakitselogo.ico
     unicode: true
     include: build/yakit_build.nsh
     license: LICENSE.md
