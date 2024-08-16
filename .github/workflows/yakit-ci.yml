@@ -2,10 +2,10 @@ name: Yakit-CI
 
 on:
     push:
-        # branches:
-        #   - "ci/*"
-        tags:
-            - "vaa*"
+        branches:
+          - "ci/yakit-*"
+        # tags:
+        #     - "vaa*"
 
 jobs:
     build_yakit:
