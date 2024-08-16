@@ -281,7 +281,7 @@ jobs:
                   SSH_PRIVATE_KEY: ${{ secrets.ONLINE_PRIV_KEY }}
                   REMOTE_USER: "root"
                   ARGS: "-avzr --delete"
-                  SOURCE: ""
+                  SOURCE: "*"
                   TARGET: "/root/yakit-ee/${{ steps.generate_version.outputs.value }}/"
 
             # - name: Upload Yakit to oss
