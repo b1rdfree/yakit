@@ -10,7 +10,7 @@ on:
 
 jobs:
     build_yakit:
-        runs-on: macos-13
+        runs-on: ubuntu-latest
         env:
             CI: ""
             NODE_OPTIONS: --max_old_space_size=4096
@@ -118,7 +118,16 @@ jobs:
               working-directory: ./
               run: yarn pack-win
 
-            - run: yarn add electron@22.3.27
+            # - run: yarn add electron@22.3.27
+            #   if: ${{ env.IS_TAG_RELEASE == 'tag/v' || env.COMPATIBILITY_MODE == 'legacy' }}
+            #   working-directory: ./
+            #   name: "Install Legacy Electron"
+
+            - run: npm config set registry https://registry.loongnix.cn:4873 && yarn config set registry https://registry.loongnix.cn:4873
+              if: ${{ env.IS_TAG_RELEASE == 'tag/v' || env.COMPATIBILITY_MODE == 'legacy' }}
+              working-directory: ./
+              name: "Install Legacy Electron"
+            - run: ELECTRON_MIRROR=http://ftp.loongnix.cn/electron/LoongArch/ npm install electron@26.4.3
               if: ${{ env.IS_TAG_RELEASE == 'tag/v' || env.COMPATIBILITY_MODE == 'legacy' }}
               working-directory: ./
               name: "Install Legacy Electron"
