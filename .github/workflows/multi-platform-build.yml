@@ -1,6 +1,9 @@
 name: Multi-Platform Build Develop
 
 on:
+    push:
+        branches:
+            - "feature/ci-file-update"
     workflow_dispatch:
         inputs:
             platform:
