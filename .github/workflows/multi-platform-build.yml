@@ -228,9 +228,9 @@ jobs:
               with:
                   name: yakit-artifacts
                   path: |
-                      ./release/yakit-${{ steps.package_version.outputs.value }}-*.exe
-                      ./release/yakit-${{ steps.package_version.outputs.value }}-*.dmg
-                      ./release/yakit-${{ steps.package_version.outputs.value }}-*.AppImage
+                      ./release/Yakit-${{ steps.package_version.outputs.value }}-*.exe
+                      ./release/Yakit-${{ steps.package_version.outputs.value }}-*.dmg
+                      ./release/Yakit-${{ steps.package_version.outputs.value }}-*.AppImage
                   if-no-files-found: error
 
               # - name: Upload Yakit(CE) Artifacts Windows
