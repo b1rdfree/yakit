@@ -45,7 +45,7 @@ jobs:
 
         steps:
             - name: Display incoming configuration parameters
-              run: echo ${{ inputs.platform }} ${{ inputs.version }} ${{ inputs.engine }}
+              run: echo ${{ inputs.platform }} ${{ inputs.version }} ${{ inputs.engine }} ${{ inputs.devTool }}
 
             - uses: actions/checkout@v4
             - uses: actions/setup-node@v4
@@ -125,7 +125,7 @@ jobs:
               name: "Install Legacy Electron"
 
             - name: "Build CE Render"
-              if: ${{ !inputs.devTool && inputs.version == 'ce' }}
+              if: ${{ inputs.version == 'ce' }}
               working-directory: ./
               run: yarn build${{ inputs.devTool && '-test' || '' }}-render
 
