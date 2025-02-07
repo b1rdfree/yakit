@@ -47,7 +47,7 @@ jobs:
             NODE_OPTIONS: --max_old_space_size=4096
 
         steps:
-            - name: Show Custom ENV
+            - name: Display incoming configuration parameters
               run: echo ${{ inputs.platform }} ${{ inputs.version }} ${{ inputs.engine }}
 
             - uses: actions/checkout@v4
@@ -96,7 +96,8 @@ jobs:
               if: ${{ inputs.engine }}
               id: fetch-version-engine
               run: wget -O bins/engine-version.txt https://yaklang.oss-accelerate.aliyuncs.com/yak/latest/version.txt
-            - run: ls ./bins && cat bins/engine-version.txt
+            - if: ${{ inputs.engine }}
+              run: ls ./bins && cat bins/engine-version.txt
 
             - name: Extract Package.json Version
               id: extract_version
