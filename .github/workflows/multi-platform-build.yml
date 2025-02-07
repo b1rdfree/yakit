@@ -66,29 +66,29 @@ jobs:
             - run: zip -h
 
             - name: "Download Yak Engine via wget(MacOS)"
-              if: ${{ inputs.engine && contains(['darwin','darwin-legacy','mwl','mwl-legacy'], inputs.platform) }}
+              if: ${{ inputs.engine && contains(fromJSON('["darwin","darwin-legacy","mwl","mwl-legacy"]'), inputs.platform) }}
               id: download-darwin-engine
               run: wget -O bins/yak_darwin_amd64 https://yaklang.oss-accelerate.aliyuncs.com/yak/latest/yak_darwin_amd64 && zip ./bins/yak_darwin_amd64.zip ./bins/yak_darwin_amd64 && rm ./bins/yak_darwin_amd64
             - name: "Download Yak Engine via wget(MacOS-arm64)"
-              if: ${{ inputs.engine && contains(['darwin','darwin-legacy','mwl','mwl-legacy'], inputs.platform) }}
+              if: ${{ inputs.engine && contains(fromJSON('["darwin","darwin-legacy","mwl","mwl-legacy"]'), inputs.platform) }}
               id: download-darwin-engine-arm64
               run: wget -O bins/yak_darwin_arm64 https://yaklang.oss-accelerate.aliyuncs.com/yak/latest/yak_darwin_arm64 && zip ./bins/yak_darwin_arm64.zip ./bins/yak_darwin_arm64 && rm ./bins/yak_darwin_arm64
 
             - name: "Download Yak Engine via wget(Linux)"
-              if: ${{ inputs.engine && contains(['linux','linux-legacy','mwl','mwl-legacy'], inputs.platform) }}
+              if: ${{ inputs.engine && contains(fromJSON('["linux","linux-legacy","mwl","mwl-legacy"]'), inputs.platform) }}
               id: download-linux-engine
               run: wget -O bins/yak_linux_amd64 https://yaklang.oss-accelerate.aliyuncs.com/yak/latest/yak_linux_amd64 && zip ./bins/yak_linux_amd64.zip ./bins/yak_linux_amd64 && rm ./bins/yak_linux_amd64
             - name: "Download Yak Engine via wget(Linux-arm64)"
-              if: ${{ inputs.engine && contains(['linux','linux-legacy','mwl','mwl-legacy'], inputs.platform) }}
+              if: ${{ inputs.engine && contains(fromJSON('["linux","linux-legacy","mwl","mwl-legacy"]'), inputs.platform) }}
               id: download-linux-engine-arm64
               run: wget -O bins/yak_linux_arm64 https://yaklang.oss-accelerate.aliyuncs.com/yak/latest/yak_linux_arm64 && zip ./bins/yak_linux_arm64.zip ./bins/yak_linux_arm64 && rm ./bins/yak_linux_arm64
 
             - name: "Download Yak Engine via wget(Windows)"
-              if: ${{ inputs.engine && contains(['windows','mwl'], inputs.platform) }}
+              if: ${{ inputs.engine && contains(fromJSON('["windows","mwl"]'), inputs.platform) }}
               id: download-windows-engine
               run: wget -O bins/yak_windows_amd64.exe https://yaklang.oss-accelerate.aliyuncs.com/yak/latest/yak_windows_amd64.exe && zip ./bins/yak_windows_amd64.zip ./bins/yak_windows_amd64.exe && rm ./bins/yak_windows_amd64.exe
             - name: "Download Yak Legacy Engine via wget(Windows)"
-              if: ${{ inputs.engine && contains(['windows-legacy','mwl-legacy'], inputs.platform) }}
+              if: ${{ inputs.engine && contains(fromJSON('["windows-legacy","mwl-legacy"]'), inputs.platform) }}
               id: download-windows-leagacy-engine
               run: wget -O bins/yak_windows_amd64.exe https://yaklang.oss-accelerate.aliyuncs.com/yak/latest/yak_windows_legacy_amd64.exe && zip ./bins/yak_windows_amd64.zip ./bins/yak_windows_amd64.exe && rm ./bins/yak_windows_amd64.exe
 
@@ -122,7 +122,7 @@ jobs:
               working-directory: ./
               name: "Install Dependencies"
             - run: yarn add electron@22.3.27
-              if: ${{ contains(['windows-legacy','darwin-legacy','linux-legacy','mwl-legacy'], inputs.platform) }}
+              if: ${{ contains(fromJSON('["windows-legacy","darwin-legacy","linux-legacy","mwl-legacy"]'), inputs.platform) }}
               working-directory: ./
               name: "Install Legacy Electron"
 
