@@ -9,13 +9,14 @@ on:
                 type: choice
                 options:
                     - windows
-                    - windows-legacy
                     - darwin
-                    - darwin-legacy
                     - linux
-                    - linux-legacy
                     - mwl
-                    - mwl-legacy
+            legacy:
+                description: "Compatible with older versions of the system"
+                required: false
+                type: boolean
+                default: false
             version:
                 description: "Select version type"
                 required: true
@@ -45,7 +46,7 @@ jobs:
 
         steps:
             - name: Display incoming configuration parameters
-              run: echo ${{ inputs.platform }} ${{ inputs.version }} ${{ inputs.engine }} ${{ inputs.devTool }}
+              run: echo ${{ inputs.platform }} ${{ inputs.legacy }} ${{ inputs.version }} ${{ inputs.engine }} ${{ inputs.devTool }}
 
             - uses: actions/checkout@v4
             - uses: actions/setup-node@v4
@@ -63,29 +64,29 @@ jobs:
             - run: zip -h
 
             - name: "Download Yak Engine via wget(MacOS)"
-              if: ${{ inputs.engine && contains(fromJSON('["darwin","darwin-legacy","mwl","mwl-legacy"]'), inputs.platform) }}
+              if: ${{ inputs.engine && contains(fromJSON('["darwin","mwl"]'), inputs.platform) }}
               id: download-darwin-engine
               run: wget -O bins/yak_darwin_amd64 https://yaklang.oss-accelerate.aliyuncs.com/yak/latest/yak_darwin_amd64 && zip ./bins/yak_darwin_amd64.zip ./bins/yak_darwin_amd64 && rm ./bins/yak_darwin_amd64
             - name: "Download Yak Engine via wget(MacOS-arm64)"
-              if: ${{ inputs.engine && contains(fromJSON('["darwin","darwin-legacy","mwl","mwl-legacy"]'), inputs.platform) }}
+              if: ${{ inputs.engine && contains(fromJSON('["darwin","mwl"]'), inputs.platform) }}
               id: download-darwin-engine-arm64
               run: wget -O bins/yak_darwin_arm64 https://yaklang.oss-accelerate.aliyuncs.com/yak/latest/yak_darwin_arm64 && zip ./bins/yak_darwin_arm64.zip ./bins/yak_darwin_arm64 && rm ./bins/yak_darwin_arm64
 
             - name: "Download Yak Engine via wget(Linux)"
-              if: ${{ inputs.engine && contains(fromJSON('["linux","linux-legacy","mwl","mwl-legacy"]'), inputs.platform) }}
+              if: ${{ inputs.engine && contains(fromJSON('["linux","mwl"]'), inputs.platform) }}
               id: download-linux-engine
               run: wget -O bins/yak_linux_amd64 https://yaklang.oss-accelerate.aliyuncs.com/yak/latest/yak_linux_amd64 && zip ./bins/yak_linux_amd64.zip ./bins/yak_linux_amd64 && rm ./bins/yak_linux_amd64
             - name: "Download Yak Engine via wget(Linux-arm64)"
-              if: ${{ inputs.engine && contains(fromJSON('["linux","linux-legacy","mwl","mwl-legacy"]'), inputs.platform) }}
+              if: ${{ inputs.engine && contains(fromJSON('["linux","mwl"]'), inputs.platform) }}
               id: download-linux-engine-arm64
               run: wget -O bins/yak_linux_arm64 https://yaklang.oss-accelerate.aliyuncs.com/yak/latest/yak_linux_arm64 && zip ./bins/yak_linux_arm64.zip ./bins/yak_linux_arm64 && rm ./bins/yak_linux_arm64
 
             - name: "Download Yak Engine via wget(Windows)"
-              if: ${{ inputs.engine && contains(fromJSON('["windows","mwl"]'), inputs.platform) }}
+              if: ${{ inputs.engine && !inputs.legacy && contains(fromJSON('["windows","mwl"]'), inputs.platform) }}
               id: download-windows-engine
               run: wget -O bins/yak_windows_amd64.exe https://yaklang.oss-accelerate.aliyuncs.com/yak/latest/yak_windows_amd64.exe && zip ./bins/yak_windows_amd64.zip ./bins/yak_windows_amd64.exe && rm ./bins/yak_windows_amd64.exe
             - name: "Download Yak Legacy Engine via wget(Windows)"
-              if: ${{ inputs.engine && contains(fromJSON('["windows-legacy","mwl-legacy"]'), inputs.platform) }}
+              if: ${{ inputs.engine && inputs.legacy && contains(fromJSON('["windows","mwl"]'), inputs.platform) }}
               id: download-windows-leagacy-engine
               run: wget -O bins/yak_windows_amd64.exe https://yaklang.oss-accelerate.aliyuncs.com/yak/latest/yak_windows_legacy_amd64.exe && zip ./bins/yak_windows_amd64.zip ./bins/yak_windows_amd64.exe && rm ./bins/yak_windows_amd64.exe
 
@@ -120,7 +121,7 @@ jobs:
               working-directory: ./
               name: "Install Dependencies"
             - run: yarn add electron@22.3.27
-              if: ${{ contains(fromJSON('["windows-legacy","darwin-legacy","linux-legacy","mwl-legacy"]'), inputs.platform) }}
+              if: ${{ inputs.legacy }}
               working-directory: ./
               name: "Install Legacy Electron"
 
@@ -130,166 +131,186 @@ jobs:
               run: yarn build${{ inputs.devTool && '-test' || '' }}-render
 
             - name: "Build EE Render"
-              if: ${{ !inputs.devTool && inputs.version == 'ee' }}
+              if: ${{ inputs.version == 'ee' }}
               working-directory: ./
-              run: yarn build-render-enterprise
-            - name: "Build EE Render"
-              if: ${{ inputs.devTool && inputs.version == 'ee' }}
+              run: yarn build-render${{ inputs.devTool && '-test' || '' }}-enterprise
+
+            - name: "Build SE Render"
+              if: ${{ inputs.version == 'se' }}
               working-directory: ./
-              run: yarn build-render-test-enterprise
+              run: yarn build-render${{ inputs.devTool && '-test' || '' }}-simple-enterprise
 
-            # - name: "Build SE Render"
-            #   if: ${{ !inputs.devTool && inputs.version == 'se' }}
-            #   working-directory: ./
-            #   run: yarn build-render-simple-enterprise
-            # - name: "Build SE Render"
-            #   if: ${{ inputs.devTool && inputs.version == 'se' }}
-            #   working-directory: ./
-            #   run: yarn build-render-test-simple-enterprise
+            - name: Build Yakit (MultiPlatform)
+              if: ${{ inputs.platform == 'mwl' }}
+              env:
+                  GH_TOKEN: ${{ secrets.GH_TOKEN }}
+              working-directory: ./
+              run: |
+                  yarn add -D dmg-license
+                  if [ "${{ inputs.version }}" = "ce" ]; then
+                    yarn electron-publish${{ inputs.legacy && '-legacy' || '' }}
+                  elif [ "${{ inputs.version }}" = "ee" ]; then
+                    yarn electron-publish-ee${{ inputs.legacy && '-legacy' || '' }}
+                  elif [ "${{ inputs.version }}" = "se" ]; then
+                    yarn electron-publish-se${{ inputs.legacy && '-legacy' || '' }}
+                  else
+                    echo "未知的输入值: ${{ inputs.version }}" >&2
+                    exit 1
+                  fi
 
-            # - name: Build Yakit (MultiPlatform)
-            #   if: ${{ inputs.platform == 'mwl' }}
-            #   env:
-            #       GH_TOKEN: ${{ secrets.GH_TOKEN }}
-            #   working-directory: ./
-            #   run: yarn add -D dmg-license && yarn electron-publish
-            # - name: Build Yakit (MAC)
-            #   if: ${{ inputs.platform == 'darwin' }}
-            #   env:
-            #       GH_TOKEN: ${{ secrets.GH_TOKEN }}
-            #   working-directory: ./
-            #   run: yarn pack-mac
-            # - name: Build Yakit (LINUX)
-            #   if: ${{ inputs.platform == 'linux' }}
-            #   env:
-            #       GH_TOKEN: ${{ secrets.GH_TOKEN }}
-            #   working-directory: ./
-            #   run: yarn pack-linux
-            # - name: Build Yakit (WIN)
-            #   if: ${{ inputs.platform == 'windows' }}
-            #   env:
-            #       GH_TOKEN: ${{ secrets.GH_TOKEN }}
-            #   working-directory: ./
-            #   run: yarn pack-win
+            - name: Build Yakit (MAC)
+              if: ${{ inputs.platform == 'darwin' }}
+              env:
+                  GH_TOKEN: ${{ secrets.GH_TOKEN }}
+              working-directory: ./
+              run: |
+                  if [ "${{ inputs.version }}" = "ce" ]; then
+                    yarn pack-mac${{ inputs.legacy && '-legacy' || '' }}
+                  elif [ "${{ inputs.version }}" = "ee" ]; then
+                    yarn pack-mac-ee${{ inputs.legacy && '-legacy' || '' }}
+                  elif [ "${{ inputs.version }}" = "se" ]; then
+                    yarn pack-mac-se${{ inputs.legacy && '-legacy' || '' }}
+                  else
+                    echo "未知的输入值: ${{ inputs.version }}" >&2
+                    exit 1
+                  fi
 
-            # - name: Build Yakit Legacy (MultiPlatform)
-            #   if: ${{ inputs.platform == 'mwl-legacy' }}
-            #   env:
-            #       GH_TOKEN: ${{ secrets.GH_TOKEN }}
-            #   working-directory: ./
-            #   run: yarn add -D dmg-license && yarn electron-publish-legacy
-            # - name: Build Yakit Legacy (MAC)
-            #   if: ${{ env.IS_TAG_RELEASE != 'tag/v' && env.PACKAGING_PLATFORM == 'mac' && env.COMPATIBILITY_MODE == 'legacy' }}
-            #   env:
-            #       GH_TOKEN: ${{ secrets.GH_TOKEN }}
-            #   working-directory: ./
-            #   run: yarn pack-mac-legacy
-            # - name: Build Yakit Legacy (LINUX)
-            #   if: ${{ env.IS_TAG_RELEASE != 'tag/v' && env.PACKAGING_PLATFORM == 'linux' && env.COMPATIBILITY_MODE == 'legacy' }}
-            #   env:
-            #       GH_TOKEN: ${{ secrets.GH_TOKEN }}
-            #   working-directory: ./
-            #   run: yarn pack-linux-legacy
+            - name: Build Yakit (LINUX)
+              if: ${{ inputs.platform == 'linux' }}
+              env:
+                  GH_TOKEN: ${{ secrets.GH_TOKEN }}
+              working-directory: ./
+              run: |
+                  if [ "${{ inputs.version }}" = "ce" ]; then
+                    yarn pack-linux${{ inputs.legacy && '-legacy' || '' }}
+                  elif [ "${{ inputs.version }}" = "ee" ]; then
+                    yarn pack-linux-ee${{ inputs.legacy && '-legacy' || '' }}
+                  elif [ "${{ inputs.version }}" = "se" ]; then
+                    yarn pack-linux-se${{ inputs.legacy && '-legacy' || '' }}
+                  else
+                    echo "未知的输入值: ${{ inputs.version }}" >&2
+                    exit 1
+                  fi
 
-            # - name: Build Yakit Legacy (WIN)
-            #   if: ${{ env.IS_TAG_RELEASE != 'tag/v' && env.PACKAGING_PLATFORM == 'win' && env.COMPATIBILITY_MODE == 'legacy' }}
-            #   env:
-            #       GH_TOKEN: ${{ secrets.GH_TOKEN }}
-            #   working-directory: ./
-            #   run: yarn pack-win-legacy
+            - name: Build Yakit (WIN)
+              if: ${{ inputs.platform == 'windows' }}
+              env:
+                  GH_TOKEN: ${{ secrets.GH_TOKEN }}
+              working-directory: ./
+              run: |
+                  if [ "${{ inputs.version }}" = "ce" ]; then
+                    yarn pack-win${{ inputs.legacy && '-legacy' || '' }}
+                  elif [ "${{ inputs.version }}" = "ee" ]; then
+                    yarn pack-win-ee${{ inputs.legacy && '-legacy' || '' }}
+                  elif [ "${{ inputs.version }}" = "se" ]; then
+                    yarn pack-win-se${{ inputs.legacy && '-legacy' || '' }}
+                  else
+                    echo "未知的输入值: ${{ inputs.version }}" >&2
+                    exit 1
+                  fi
 
-            # - name: View Published Content
-            #   run:
-            #       ls ./release
-            #       # Yakit-1.3.4-sp6-darwin-arm64.dmg
-            #       # Yakit-1.3.4-sp6-darwin-x64.dmg
-            #       # Yakit-1.3.4-sp6-linux-amd64.AppImage
-            #       # Yakit-1.3.4-sp6-linux-arm64.AppImage
-            #       # Yakit-1.3.4-sp6-windows-amd64.exe
-            #       # Yakit-1.3.4-sp6-darwin-legacy-arm64.dmg
-            #       # Yakit-1.3.4-sp6-darwin-legacy-x64.dmg
-            #       # Yakit-1.3.4-sp6-linux-legacy-amd64.AppImage
-            #       # Yakit-1.3.4-sp6-linux-legacy-arm64.AppImage
-            #       # Yakit-1.3.4-sp6-windows-legacy-amd64.exe
+            - name: View Published Content
+              run:
+                  ls ./release
+                  # Yakit-1.3.4-sp6-darwin-arm64.dmg
+                  # Yakit-1.3.4-sp6-darwin-x64.dmg
+                  # Yakit-1.3.4-sp6-linux-amd64.AppImage
+                  # Yakit-1.3.4-sp6-linux-arm64.AppImage
+                  # Yakit-1.3.4-sp6-windows-amd64.exe
+                  # Yakit-1.3.4-sp6-darwin-legacy-arm64.dmg
+                  # Yakit-1.3.4-sp6-darwin-legacy-x64.dmg
+                  # Yakit-1.3.4-sp6-linux-legacy-amd64.AppImage
+                  # Yakit-1.3.4-sp6-linux-legacy-arm64.AppImage
+                  # Yakit-1.3.4-sp6-windows-legacy-amd64.exe
 
-            # - name: Upload Yakit(CE) Artifacts Windows
-            #   uses: actions/upload-artifact@v4
-            #   if: ${{ env.IS_TAG_RELEASE == 'tag/v' || ((env.PACKAGING_PLATFORM == 'mwl' || env.PACKAGING_PLATFORM == 'win') && env.COMPATIBILITY_MODE == 'normal') }}
-            #   with:
-            #       # Yakit-1.3.4-sp6-windows-amd64.exe
-            #       name: Yakit-${{ steps.package_version.outputs.value }}-windows-amd64.exe
-            #       path: ./release/Yakit-${{ steps.package_version.outputs.value }}-windows-amd64.exe
-            #       if-no-files-found: error
-            # - name: Upload Yakit(CE) Artifacts Mac(m1)
-            #   uses: actions/upload-artifact@v4
-            #   if: ${{ env.IS_TAG_RELEASE == 'tag/v' || ((env.PACKAGING_PLATFORM == 'mwl' || env.PACKAGING_PLATFORM == 'mac') && env.COMPATIBILITY_MODE == 'normal') }}
-            #   with:
-            #       # Yakit-1.3.4-sp6-darwin-arm64.dmg
-            #       name: Yakit-${{ steps.package_version.outputs.value }}-darwin-arm64.dmg
-            #       path: ./release/Yakit-${{ steps.package_version.outputs.value }}-darwin-arm64.dmg
-            #       if-no-files-found: error
-            # - name: Upload Yakit(CE) Artifacts Mac(intel)
-            #   uses: actions/upload-artifact@v4
-            #   if: ${{ env.IS_TAG_RELEASE == 'tag/v' || ((env.PACKAGING_PLATFORM == 'mwl' || env.PACKAGING_PLATFORM == 'mac') && env.COMPATIBILITY_MODE == 'normal') }}
-            #   with:
-            #       # Yakit-1.3.4-sp6-darwin-x64.dmg
-            #       name: Yakit-${{ steps.package_version.outputs.value }}-darwin-x64.dmg
-            #       path: ./release/Yakit-${{ steps.package_version.outputs.value }}-darwin-x64.dmg
-            #       if-no-files-found: error
-            # - name: Upload Yakit(CE) Artifacts Linux(amd64)
-            #   uses: actions/upload-artifact@v4
-            #   if: ${{ env.IS_TAG_RELEASE == 'tag/v' || ((env.PACKAGING_PLATFORM == 'mwl' || env.PACKAGING_PLATFORM == 'linux') && env.COMPATIBILITY_MODE == 'normal') }}
-            #   with:
-            #       # Yakit-1.3.4-sp6-linux-amd64.AppImage
-            #       name: Yakit-${{ steps.package_version.outputs.value }}-linux-amd64.AppImage
-            #       path: ./release/Yakit-${{ steps.package_version.outputs.value }}-linux-amd64.AppImage
-            #       if-no-files-found: error
-            # - name: Upload Yakit(CE) Artifacts Linux(arm64)
-            #   uses: actions/upload-artifact@v4
-            #   if: ${{ env.IS_TAG_RELEASE == 'tag/v' || ((env.PACKAGING_PLATFORM == 'mwl' || env.PACKAGING_PLATFORM == 'linux') && env.COMPATIBILITY_MODE == 'normal') }}
-            #   with:
-            #       # Yakit-1.3.4-sp6-linux-arm64.AppImage
-            #       name: Yakit-${{ steps.package_version.outputs.value }}-linux-arm64.AppImage
-            #       path: ./release/Yakit-${{ steps.package_version.outputs.value }}-linux-arm64.AppImage
-            #       if-no-files-found: error
+            - name: Upload Yakit(CE) Artifacts Windows
+              uses: actions/upload-artifact@v4
+              with:
+                  name: yakit-artifacts
+                  path: |
+                      ./release/yakit-${{ steps.package_version.outputs.value }}-*.exe
+                      ./release/yakit-${{ steps.package_version.outputs.value }}-*.dmg
+                      ./release/yakit-${{ steps.package_version.outputs.value }}-*.AppImage
+                  if-no-files-found: error
 
-            # - name: Upload Yakit(CE) Artifacts Legacy Windows
-            #   uses: actions/upload-artifact@v4
-            #   if: ${{ env.IS_TAG_RELEASE == 'tag/v' || ((env.PACKAGING_PLATFORM == 'mwl' || env.PACKAGING_PLATFORM == 'win') && env.COMPATIBILITY_MODE == 'legacy') }}
-            #   with:
-            #       # Yakit-1.3.4-sp6-windows-legacy-amd64.exe
-            #       name: Yakit-${{ steps.package_version.outputs.value }}-windows-legacy-amd64.exe
-            #       path: ./release/Yakit-${{ steps.package_version.outputs.value }}-windows-legacy-amd64.exe
-            #       if-no-files-found: error
-            # - name: Upload Yakit(CE) Artifacts Legacy Mac(m1)
-            #   uses: actions/upload-artifact@v4
-            #   if: ${{ env.IS_TAG_RELEASE == 'tag/v' || ((env.PACKAGING_PLATFORM == 'mwl' || env.PACKAGING_PLATFORM == 'mac') && env.COMPATIBILITY_MODE == 'legacy') }}
-            #   with:
-            #       # Yakit-1.3.4-sp6-darwin-legacy-arm64.dmg
-            #       name: Yakit-${{ steps.package_version.outputs.value }}-darwin-legacy-arm64.dmg
-            #       path: ./release/Yakit-${{ steps.package_version.outputs.value }}-darwin-legacy-arm64.dmg
-            #       if-no-files-found: error
-            # - name: Upload Yakit(CE) Artifacts Legacy Mac(intel)
-            #   uses: actions/upload-artifact@v4
-            #   if: ${{ env.IS_TAG_RELEASE == 'tag/v' || ((env.PACKAGING_PLATFORM == 'mwl' || env.PACKAGING_PLATFORM == 'mac') && env.COMPATIBILITY_MODE == 'legacy') }}
-            #   with:
-            #       # Yakit-1.3.4-sp6-darwin-legacy-x64.dmg
-            #       name: Yakit-${{ steps.package_version.outputs.value }}-darwin-legacy-x64.dmg
-            #       path: ./release/Yakit-${{ steps.package_version.outputs.value }}-darwin-legacy-x64.dmg
-            #       if-no-files-found: error
-            # - name: Upload Yakit(CE) Artifacts Legacy Linux(amd64)
-            #   uses: actions/upload-artifact@v4
-            #   if: ${{ env.IS_TAG_RELEASE == 'tag/v' || ((env.PACKAGING_PLATFORM == 'mwl' || env.PACKAGING_PLATFORM == 'linux') && env.COMPATIBILITY_MODE == 'legacy') }}
-            #   with:
-            #       # Yakit-1.3.4-sp6-linux-legacy-amd64.AppImage
-            #       name: Yakit-${{ steps.package_version.outputs.value }}-linux-legacy-amd64.AppImage
-            #       path: ./release/Yakit-${{ steps.package_version.outputs.value }}-linux-legacy-amd64.AppImage
-            #       if-no-files-found: error
-            # - name: Upload Yakit(CE) Artifacts Legacy Linux(arm64)
-            #   uses: actions/upload-artifact@v4
-            #   if: ${{ env.IS_TAG_RELEASE == 'tag/v' || ((env.PACKAGING_PLATFORM == 'mwl' || env.PACKAGING_PLATFORM == 'linux') && env.COMPATIBILITY_MODE == 'legacy') }}
-            #   with:
-            #       # Yakit-1.3.4-sp6-linux-legacy-arm64.AppImage
-            #       name: Yakit-${{ steps.package_version.outputs.value }}-linux-legacy-arm64.AppImage
-            #       path: ./release/Yakit-${{ steps.package_version.outputs.value }}-linux-legacy-arm64.AppImage
-            #       if-no-files-found: error
+              # - name: Upload Yakit(CE) Artifacts Windows
+              #   uses: actions/upload-artifact@v4
+              #   if: ${{ env.IS_TAG_RELEASE == 'tag/v' || ((env.PACKAGING_PLATFORM == 'mwl' || env.PACKAGING_PLATFORM == 'win') && env.COMPATIBILITY_MODE == 'normal') }}
+              #   with:
+              #       # Yakit-1.3.4-sp6-windows-amd64.exe
+              #       name: Yakit-${{ steps.package_version.outputs.value }}-windows-amd64.exe
+              #       path: ./release/Yakit-${{ steps.package_version.outputs.value }}-windows-amd64.exe
+              #       if-no-files-found: error
+              # - name: Upload Yakit(CE) Artifacts Mac(m1)
+              #   uses: actions/upload-artifact@v4
+              #   if: ${{ env.IS_TAG_RELEASE == 'tag/v' || ((env.PACKAGING_PLATFORM == 'mwl' || env.PACKAGING_PLATFORM == 'mac') && env.COMPATIBILITY_MODE == 'normal') }}
+              #   with:
+              #       # Yakit-1.3.4-sp6-darwin-arm64.dmg
+              #       name: Yakit-${{ steps.package_version.outputs.value }}-darwin-arm64.dmg
+              #       path: ./release/Yakit-${{ steps.package_version.outputs.value }}-darwin-arm64.dmg
+              #       if-no-files-found: error
+              # - name: Upload Yakit(CE) Artifacts Mac(intel)
+              #   uses: actions/upload-artifact@v4
+              #   if: ${{ env.IS_TAG_RELEASE == 'tag/v' || ((env.PACKAGING_PLATFORM == 'mwl' || env.PACKAGING_PLATFORM == 'mac') && env.COMPATIBILITY_MODE == 'normal') }}
+              #   with:
+              #       # Yakit-1.3.4-sp6-darwin-x64.dmg
+              #       name: Yakit-${{ steps.package_version.outputs.value }}-darwin-x64.dmg
+              #       path: ./release/Yakit-${{ steps.package_version.outputs.value }}-darwin-x64.dmg
+              #       if-no-files-found: error
+              # - name: Upload Yakit(CE) Artifacts Linux(amd64)
+              #   uses: actions/upload-artifact@v4
+              #   if: ${{ env.IS_TAG_RELEASE == 'tag/v' || ((env.PACKAGING_PLATFORM == 'mwl' || env.PACKAGING_PLATFORM == 'linux') && env.COMPATIBILITY_MODE == 'normal') }}
+              #   with:
+              #       # Yakit-1.3.4-sp6-linux-amd64.AppImage
+              #       name: Yakit-${{ steps.package_version.outputs.value }}-linux-amd64.AppImage
+              #       path: ./release/Yakit-${{ steps.package_version.outputs.value }}-linux-amd64.AppImage
+              #       if-no-files-found: error
+              # - name: Upload Yakit(CE) Artifacts Linux(arm64)
+              #   uses: actions/upload-artifact@v4
+              #   if: ${{ env.IS_TAG_RELEASE == 'tag/v' || ((env.PACKAGING_PLATFORM == 'mwl' || env.PACKAGING_PLATFORM == 'linux') && env.COMPATIBILITY_MODE == 'normal') }}
+              #   with:
+              #       # Yakit-1.3.4-sp6-linux-arm64.AppImage
+              #       name: Yakit-${{ steps.package_version.outputs.value }}-linux-arm64.AppImage
+              #       path: ./release/Yakit-${{ steps.package_version.outputs.value }}-linux-arm64.AppImage
+              #       if-no-files-found: error
+
+              # - name: Upload Yakit(CE) Artifacts Legacy Windows
+              #   uses: actions/upload-artifact@v4
+              #   if: ${{ env.IS_TAG_RELEASE == 'tag/v' || ((env.PACKAGING_PLATFORM == 'mwl' || env.PACKAGING_PLATFORM == 'win') && env.COMPATIBILITY_MODE == 'legacy') }}
+              #   with:
+              #       # Yakit-1.3.4-sp6-windows-legacy-amd64.exe
+              #       name: Yakit-${{ steps.package_version.outputs.value }}-windows-legacy-amd64.exe
+              #       path: ./release/Yakit-${{ steps.package_version.outputs.value }}-windows-legacy-amd64.exe
+              #       if-no-files-found: error
+              # - name: Upload Yakit(CE) Artifacts Legacy Mac(m1)
+              #   uses: actions/upload-artifact@v4
+              #   if: ${{ env.IS_TAG_RELEASE == 'tag/v' || ((env.PACKAGING_PLATFORM == 'mwl' || env.PACKAGING_PLATFORM == 'mac') && env.COMPATIBILITY_MODE == 'legacy') }}
+              #   with:
+              #       # Yakit-1.3.4-sp6-darwin-legacy-arm64.dmg
+              #       name: Yakit-${{ steps.package_version.outputs.value }}-darwin-legacy-arm64.dmg
+              #       path: ./release/Yakit-${{ steps.package_version.outputs.value }}-darwin-legacy-arm64.dmg
+              #       if-no-files-found: error
+              # - name: Upload Yakit(CE) Artifacts Legacy Mac(intel)
+              #   uses: actions/upload-artifact@v4
+              #   if: ${{ env.IS_TAG_RELEASE == 'tag/v' || ((env.PACKAGING_PLATFORM == 'mwl' || env.PACKAGING_PLATFORM == 'mac') && env.COMPATIBILITY_MODE == 'legacy') }}
+              #   with:
+              #       # Yakit-1.3.4-sp6-darwin-legacy-x64.dmg
+              #       name: Yakit-${{ steps.package_version.outputs.value }}-darwin-legacy-x64.dmg
+              #       path: ./release/Yakit-${{ steps.package_version.outputs.value }}-darwin-legacy-x64.dmg
+              #       if-no-files-found: error
+              # - name: Upload Yakit(CE) Artifacts Legacy Linux(amd64)
+              #   uses: actions/upload-artifact@v4
+              #   if: ${{ env.IS_TAG_RELEASE == 'tag/v' || ((env.PACKAGING_PLATFORM == 'mwl' || env.PACKAGING_PLATFORM == 'linux') && env.COMPATIBILITY_MODE == 'legacy') }}
+              #   with:
+              #       # Yakit-1.3.4-sp6-linux-legacy-amd64.AppImage
+              #       name: Yakit-${{ steps.package_version.outputs.value }}-linux-legacy-amd64.AppImage
+              #       path: ./release/Yakit-${{ steps.package_version.outputs.value }}-linux-legacy-amd64.AppImage
+              #       if-no-files-found: error
+              # - name: Upload Yakit(CE) Artifacts Legacy Linux(arm64)
+              #   uses: actions/upload-artifact@v4
+              #   if: ${{ env.IS_TAG_RELEASE == 'tag/v' || ((env.PACKAGING_PLATFORM == 'mwl' || env.PACKAGING_PLATFORM == 'linux') && env.COMPATIBILITY_MODE == 'legacy') }}
+              #   with:
+              #       # Yakit-1.3.4-sp6-linux-legacy-arm64.AppImage
+              #       name: Yakit-${{ steps.package_version.outputs.value }}-linux-legacy-arm64.AppImage
+              #       path: ./release/Yakit-${{ steps.package_version.outputs.value }}-linux-legacy-arm64.AppImage
+              #       if-no-files-found: error
