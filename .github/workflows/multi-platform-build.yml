@@ -243,7 +243,6 @@ jobs:
                   if-no-files-found: error
 
     publish_yakit_ce_to_oss:
-        if: ${{ startsWith(github.ref, 'refs/tags/v') }}
         needs:
             - build_yakit
         runs-on: ubuntu-latest
