@@ -24,10 +24,6 @@ jobs:
 
             - run: echo ${{ github.ref }}
 
-            - run: cp buildutil/zip /usr/local/bin/zip
-            - run: chmod +x /usr/local/bin/zip
-            - run: zip -h
-
             - name: "Install Render Dependencies"
               run: yarn install-render
               working-directory: ./
