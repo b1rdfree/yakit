@@ -2,19 +2,24 @@ name: Gen-Multi-Platform-Render
 # 社区版
 
 on:
-    push:
+    pull_request:
+        types:
+            - closed # 仅在 PR 关闭（合并或关闭）时触发
         branches:
-            - "release-render"
-
+            - release-render # 目标分支是 release-render
 jobs:
     build_yakit:
+        if: github.event.pull_request.merged == true # 确保是合并而不是关闭
         runs-on: ubuntu-latest
         env:
             CI: ""
             NODE_OPTIONS: --max_old_space_size=4096
 
         steps:
-            - uses: actions/checkout@v4
+            - name: Checkout release-render branch
+              uses: actions/checkout@v4
+              with:
+                  ref: "release-render"
             - uses: actions/setup-node@v4
               with:
                   node-version: 18.18.2
@@ -39,7 +44,7 @@ jobs:
 
             - name: "Build EE Render"
               working-directory: ./
-              run: yarn build-render-ee
+              run: yarn build-render-enterprise
             - name: "zip EE Render"
               run: zip -r ./app/renderer/ee.zip ./app/renderer/pages && rm -rf ./app/renderer/pages
 
