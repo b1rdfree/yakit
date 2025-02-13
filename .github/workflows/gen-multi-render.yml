@@ -9,7 +9,9 @@ on:
             - release-render # 目标分支是 release-render
 jobs:
     build_yakit:
-        if: github.event.pull_request.merged == true # 确保是合并而不是关闭
+        if: |
+            github.event.pull_request.merged == true &&
+            github.event.pull_request.head.ref == 'chore/prod-ci-file'
         runs-on: ubuntu-latest
         env:
             CI: ""
