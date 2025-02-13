@@ -6,7 +6,7 @@ on:
         types:
             - closed # 仅在 PR 关闭（合并或关闭）时触发
         branches:
-            - release-render # 目标分支是 release-render
+            - release-render # 目标分支是 release-render 1111
 jobs:
     build_yakit:
         if: |
