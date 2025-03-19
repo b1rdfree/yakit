@@ -1,15 +1,28 @@
 name: Gen-Multi-Platform-Render
 
 on:
-    push:
-        tags:
-            - "v*-render"
-            - "!v*-sast-render"
+    # push:
+    #     tags:
+    #         - "v*-render"
+    #         - "!v*-sast-render"
+    workflow_dispatch:
+        inputs:
+            version:
+                description: "Select version type"
+                required: true
+                type: choice
+                default: ce
+                options:
+                    - ce
+                    - ee
+                    - sce
+                    - see
 
 jobs:
     build_yakit:
         if: ${{ startsWith(github.ref_name, 'v') && endsWith(github.ref_name, '-render') }}
         runs-on: ubuntu-latest
+        environment: prod-render
         env:
             CI: ""
             NODE_OPTIONS: --max_old_space_size=4096
